@@ -5,25 +5,25 @@ type
     Up, Right, Down, Left
 
   Tile* = ref object
-    tileid*: int
+    tileid: int
     probability*: float
-    up*: Hash
-    down*: Hash
-    left*: Hash
-    right*: Hash
+    up: Hash
+    down: Hash
+    left: Hash
+    right: Hash
 
   Cell* = ref object
     cellid*: int
-    x*, y*: int
-    tiles*: seq[Tile]
-    collapsed*: bool = false
-    entropy*: int
+    x, y: int
+    tiles: seq[Tile]
+    collapsed: bool = false
+    entropy: int
     neighbors*: array[Direction, Cell]
 
   Model* = ref object
-    tiles*: seq[Tile]
-    width*, height*: int
-    cells*: seq[Cell]
+    tiles: seq[Tile]
+    width, height: int
+    cells: seq[Cell]
     uncollapsedCells*: seq[Cell]
     maxEntropy*: int
 
@@ -31,10 +31,10 @@ type
 
 proc new*(_: typedesc[Tile], tileid: int, probability: float,
     wangid: WangId): Tile =
-  const up = hashes.hash([wangid[7], wangid[0], wangid[1]])
-  const right = hashes.hash([wangid[1], wangid[2], wangid[3]])
-  const down = hashes.hash([wangid[5], wangid[4], wangid[3]])
-  const left = hashes.hash([wangid[7], wangid[6], wangid[5]])
+  let up = hashes.hash([wangid[7], wangid[0], wangid[1]])
+  let right = hashes.hash([wangid[1], wangid[2], wangid[3]])
+  let down = hashes.hash([wangid[5], wangid[4], wangid[3]])
+  let left = hashes.hash([wangid[7], wangid[6], wangid[5]])
   result = Tile(tileid: tileid, probability: probability, up: up, right: right,
       down: down, left: left)
 
@@ -71,12 +71,13 @@ proc getTile*(self: Cell): Tile = self.tiles[0]
 
 proc collapse*(self: Cell): void =
   # TODO: Get the random tile by probability and verify the code
-  var tile: Tile
-  var total = 0.0
-  for t in self.tiles:
+  var
+    tile: Tile
+    total = 0.0
+  for i, t in self.tiles:
     total += t.probability
   var random = rand(total)
-  for t in self.tiles:
+  for i, t in self.tiles:
     random -= t.probability
     if random <= 0:
       tile = t
