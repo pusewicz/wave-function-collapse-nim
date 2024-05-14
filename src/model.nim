@@ -27,8 +27,10 @@ type
     uncollapsedCells*: seq[Cell]
     maxEntropy*: int
 
-proc new*(_: typedesc[Tile], tileid: int, probability: float, wangid: array[
-    0..8, int]): Tile =
+  WangId = array[0..7, int]
+
+proc new*(_: typedesc[Tile], tileid: int, probability: float,
+    wangid: WangId): Tile =
   const up = hashes.hash([wangid[7], wangid[0], wangid[1]])
   const right = hashes.hash([wangid[1], wangid[2], wangid[3]])
   const down = hashes.hash([wangid[5], wangid[4], wangid[3]])

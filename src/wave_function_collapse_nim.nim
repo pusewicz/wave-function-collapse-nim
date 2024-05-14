@@ -95,7 +95,7 @@ when isMainModule:
       deltaTime = 0.0
       ticks: uint64
       freq = sdl.getPerformanceFrequency()
-      tile = Tile.new(123, 1.0, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+      tile = Tile.new(123, 1.0, [0, 1, 2, 3, 4, 5, 6, 7])
       cell1 = Cell.new(1, 1, @[tile])
       cell2 = Cell.new(2, 2, @[tile])
 
