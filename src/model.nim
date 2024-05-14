@@ -84,7 +84,7 @@ proc collapse*(self: Cell): void =
 
 proc cellAt*(self: Model, x, y: int): Cell = self.cells[x + y * self.width]
 
-proc neighbors*(self: Cell, model: Model): Cell.neighbors =
+proc neighborsFor*(self: Cell, model: Model): Cell.neighbors =
   if self.y < model.height - 1:
     self.neighbors[Up] = model.cellAt(self.x, self.y + 1)
 
@@ -110,7 +110,7 @@ proc randomCell(cells: Model.uncollapsedCells): Cell =
   cells[index]
 
 proc evaluateNeighbor(self: Model, cell: Cell, direction: Direction): void =
-  var neighbors = cell.neighbors(self)
+  var neighbors = cell.neighborsFor(self)
   var neighbor = neighbors[direction]
   if neighbor == nil:
     return
