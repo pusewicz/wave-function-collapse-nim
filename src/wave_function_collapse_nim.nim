@@ -1,6 +1,5 @@
 import sdl2_nim/sdl, sdl2_nim/sdl_image as img
-
-import cell, tile
+import model
 
 const
   Title = "Wave Function Collapse in Nim with SDL2"
