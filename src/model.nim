@@ -1,5 +1,5 @@
 import std/random
-import types
+import types, cell
 
 proc new*(_: typedesc[Model], width: int, height: int, tiles: sink seq[Tile]): Model =
   result = Model(width: width, height: height, tiles: tiles)
@@ -23,12 +23,16 @@ proc `complete?`*(self: Model): bool = self.uncollapsedCells.len == 0
 proc percent*(self: Model): float = 1.0 - float(self.uncollapsedCells.len) /
     float(self.cells.len)
 
-proc randomCell(self: Model): Cell =
-  let index = rand(self.uncollapsedCells.len)
-  self.uncollapsedCells[index]
+proc randomCell(cells: Model.uncollapsedCells): Cell =
+  let index = rand(cells.len)
+  cells[index]
 
-# proc evaluateNeighbor(self: Model, cell: Cell, direction: Direction): void =
-#   let nrig
+proc evaluateNeighbor(self: Model, cell: Cell, direction: Direction): void =
+  var neighbors = cell.neighbors(self)
+  var neighbor = neighbors[direction]
+  if neighbor == nil:
+    return
+  # TODO: Implement
 
 proc propagateCell(self: Model, cell: Cell): void =
   self.evaluateNeighbor(cell, Direction.Up)
@@ -41,14 +45,12 @@ proc processCell*(self: Model, cell: Cell): void =
   let index = self.uncollapsedCells.find(cell)
   self.uncollapsedCells.del(index)
 
-  # return if uncollapsedCells.len == 0
   if self.uncollapsedCells.len == 0:
     return
 
-  # Propagate cell
   self.propagate(cell)
 
 proc solve*(self: Model): seq[Tile] = # TODO: Can this be an array?
-  let cell = self.randomCell()
+  let cell = randomCell(self.uncollapsedCells)
   self.processCell(cell)
   self.generateGrid()

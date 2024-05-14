@@ -18,7 +18,7 @@ type
     tiles*: seq[Tile]
     collapsed*: bool = false
     entropy*: int
-    neighbors* = array[Direction, Cell]
+    neighbors*: array[Direction, Cell]
 
   Model* = ref object
     tiles*: seq[Tile]

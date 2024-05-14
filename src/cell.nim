@@ -1,7 +1,5 @@
-# Implements a cell object in a grid with x and y coordinates
-
 import std/random
-import types
+import types, model
 
 proc new*(_: typedesc[Cell], x: int, y: int, tiles: sink seq[Tile]): Cell =
   var cellId {.global.}: int
@@ -36,15 +34,15 @@ proc collapse*(self: Cell): void =
 
 proc neighbors*(self: Cell, model: Model): Cell.neighbors =
   if self.y < model.height - 1:
-    self.neighbors[Direction.Up] = model.cellAt(self.x, self.y + 1)
+    self.neighbors[Up] = model.cellAt(self.x, self.y + 1)
 
   if self.x < model.width - 1:
-    self.neighbors[Direction.Right] = model.cellAt(self.x + 1, self.y)
+    self.neighbors[Right] = model.cellAt(self.x + 1, self.y)
 
   if self.y > 0:
-    self.neighbors[Direction.Down] = model.cellAt(self.x, self.y - 1)
+    self.neighbors[Down] = model.cellAt(self.x, self.y - 1)
 
   if self.x > 0:
-    self.neighbors[Direction.Left] = model.cellAt(self.x - 1, self.y)
+    self.neighbors[Left] = model.cellAt(self.x - 1, self.y)
 
   self.neighbors
