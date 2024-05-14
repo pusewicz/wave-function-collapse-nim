@@ -1,0 +1,4 @@
+--noNimblePath
+--path:"/Users/piotr/.nimble/pkgs2/sdl2_nim-2.0.14.3-dd020f93fcf762e28d3d1462a7bba0c91a5a36dd"
+--path:"/Users/piotr/.nimble/pkgs2/x11-1.2-6db9aa495a228e9e68faa80acf301f60accd8e5a"
+--path:"/Users/piotr/.nimble/pkgs2/winim-3.9.2-154c271e1d766fca5aea32beecec5645e6d2e114"
