@@ -123,7 +123,7 @@ proc evaluateNeighbor(self: Model, sourceCell: Cell,
     direction: Direction): void =
   var neighbors = sourceCell.neighborsFor(self)
   var neighbor = neighbors[direction]
-  if neighbor == nil:
+  if neighbor == nil or neighbor.collapsed:
     return
 
   let originalTileCount = neighbor.tiles.len
@@ -148,9 +148,8 @@ proc evaluateNeighbor(self: Model, sourceCell: Cell,
 
   if neighbor.collapsed:
     let index = self.uncollapsedCells.find(neighbor)
-    # TODO: Cell should always be present
-    if index != -1:
-      self.uncollapsedCells.del(index)
+    assert index != -1
+    self.uncollapsedCells.del(index)
 
   if neighbor.tiles.len != originalTileCount:
     self.propagate(neighbor)
@@ -160,7 +159,6 @@ proc processCell*(self: Model, cell: Cell): void =
   assert cell.collapsed
 
   let index = self.uncollapsedCells.find(cell)
-  assert index != -1
   self.uncollapsedCells.del(index)
 
   if self.uncollapsedCells.len == 0:
