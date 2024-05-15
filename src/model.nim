@@ -1,4 +1,4 @@
-import std/random, hashes
+import std/[random, sequtils], hashes
 
 type
   Direction* = enum
@@ -7,10 +7,7 @@ type
   Tile* = ref object
     tileid: int
     probability*: float
-    up: Hash
-    down: Hash
-    left: Hash
-    right: Hash
+    edges*: array[Direction, Hash]
 
   Cell* = ref object
     cellid*: int
@@ -22,32 +19,30 @@ type
 
   Model* = ref object
     tiles: seq[Tile]
-    width, height: int
+    width*, height*: int
     cells: seq[Cell]
     uncollapsedCells*: seq[Cell]
     maxEntropy*: int
+
+  Grid* = seq[seq[Tile]]
 
   WangId = array[0..7, int]
 
 proc new*(_: typedesc[Tile], tileid: int, probability: float,
     wangid: WangId): Tile =
-  let up = hashes.hash([wangid[7], wangid[0], wangid[1]])
-  let right = hashes.hash([wangid[1], wangid[2], wangid[3]])
-  let down = hashes.hash([wangid[5], wangid[4], wangid[3]])
-  let left = hashes.hash([wangid[7], wangid[6], wangid[5]])
-  result = Tile(tileid: tileid, probability: probability, up: up, right: right,
-      down: down, left: left)
+  var edges: array[Direction, Hash]
+  edges[Up] = hashes.hash([wangid[7], wangid[0], wangid[1]])
+  edges[Right] = hashes.hash([wangid[1], wangid[2], wangid[3]])
+  edges[Down] = hashes.hash([wangid[5], wangid[4], wangid[3]])
+  edges[Left] = hashes.hash([wangid[7], wangid[6], wangid[5]])
+  result = Tile(tileid: tileid, probability: probability, edges: edges)
 
 proc new*(_: typedesc[Model], width: int, height: int, tiles: sink seq[Tile]): Model =
   result = Model(width: width, height: height, tiles: tiles)
-  # Iterate 0 to width
   for x in 0 ..< width:
-    # Iterate 0 to height
     for y in 0 ..< height:
-      # Create a new cell
-      let c = Cell(x: x, y: y, tiles: tiles)
-      # Add the cell to the cells array
-      result.cells.add(c)
+      let cell = Cell(x: x, y: y, tiles: tiles)
+      result.cells.add(cell)
 
   # TODO: Below should be a copy of the cells array
   result.uncollapsedCells = result.cells # TODO: Reject already collapsed
@@ -62,10 +57,9 @@ proc update(self: Cell): void =
   self.entropy = self.tiles.len
   self.collapsed = self.entropy == 1
 
-proc setTiles*(self: Cell, tiles: seq[Tile]): Cell =
+proc setTiles*(self: Cell, tiles: seq[Tile]): void =
   self.tiles = tiles
   self.update()
-  self
 
 proc getTile*(self: Cell): Tile = self.tiles[0]
 
@@ -102,8 +96,7 @@ proc neighborsFor*(self: Cell, model: Model): Cell.neighbors =
 
   self.neighbors
 
-
-proc `complete?`*(self: Model): bool = self.uncollapsedCells.len == 0
+proc complete*(self: Model): bool = self.uncollapsedCells.len == 0
 
 proc percent*(self: Model): float = 1.0 - float(self.uncollapsedCells.len) /
     float(self.cells.len)
@@ -112,18 +105,47 @@ proc randomCell(cells: Model.uncollapsedCells): Cell =
   let index = rand(cells.len)
   cells[index]
 
-proc evaluateNeighbor(self: Model, cell: Cell, direction: Direction): void =
-  var neighbors = cell.neighborsFor(self)
-  var neighbor = neighbors[direction]
-  if neighbor == nil:
-    return
-  # TODO: Implement
+proc propagate(self: Model, cell: Cell): void # Forward declaration
+proc evaluateNeighbor(self: Model, sourceCell: Cell, direction: Direction): void
 
 proc propagate(self: Model, cell: Cell): void =
   self.evaluateNeighbor(cell, Direction.Up)
   self.evaluateNeighbor(cell, Direction.Right)
   self.evaluateNeighbor(cell, Direction.Down)
   self.evaluateNeighbor(cell, Direction.Left)
+
+proc evaluateNeighbor(self: Model, sourceCell: Cell,
+    direction: Direction): void =
+  var neighbors = sourceCell.neighborsFor(self)
+  var neighbor = neighbors[direction]
+  if neighbor == nil:
+    return
+
+  let originalTileCount = neighbor.tiles.len
+  let oppositeDirection = case direction
+    of Direction.Up: Direction.Down
+    of Direction.Right: Direction.Left
+    of Direction.Down: Direction.Up
+    of Direction.Left: Direction.Right
+  let neighborTiles = neighbor.tiles
+
+  let sourceTileEdges = sourceCell.tiles.mapIt(it.edges[direction])
+
+  var newTiles: seq[Tile]
+  let ntl = neighbor.tiles.len
+  for i in 0 ..< ntl:
+    let tile = neighborTiles[i]
+    if sourceTileEdges.contains(tile.edges[oppositeDirection]):
+      newTiles.add(tile)
+
+  if newTiles.len > 0:
+    neighbor.setTiles(newTiles)
+
+  if neighbor.collapsed:
+    self.uncollapsedCells.del(self.uncollapsedCells.find(neighbor))
+
+  if neighbor.tiles.len != originalTileCount:
+    self.propagate(neighbor)
 
 proc processCell*(self: Model, cell: Cell): void =
   cell.collapse()
@@ -135,7 +157,43 @@ proc processCell*(self: Model, cell: Cell): void =
 
   self.propagate(cell)
 
-proc solve*(self: Model): seq[Tile] = # TODO: Can this be an array?
+# Finds cells with lowest entropy and returns a random one
+proc findLowestEntropy(cells: seq[Cell]): Cell =
+  var lowestEntropy = cells[0].entropy
+  var lowestEntropyCells: seq[Cell] = @[cells[0]]
+  for i in 1 ..< cells.len:
+    let cell = cells[i]
+    if cell.entropy < lowestEntropy:
+      lowestEntropy = cell.entropy
+      lowestEntropyCells = @[cell]
+    elif cell.entropy == lowestEntropy:
+      lowestEntropyCells.add(cell)
+
+  let index = rand(lowestEntropyCells.len)
+  lowestEntropyCells[index]
+
+proc generateGrid(self: Model): Grid =
+  result = newSeq[seq[Tile]](self.width)
+
+  for x in 0 ..< self.width:
+    result[x] = newSeq[Tile](self.height)
+    for y in 0 ..< self.height:
+      let cell = self.cellAt(x, y)
+      result[x][y] = cell.getTile()
+
+proc iterate*(self: Model): auto =
+  if self.complete():
+    return nil
+
+  let cell = findLowestEntropy(self.uncollapsedCells)
+  if cell == nil:
+    return nil
+
+  self.processCell(cell)
+  self.generateGrid()
+
+
+proc solve*(self: Model): Grid = # TODO: Can this be an array?
   let cell = randomCell(self.uncollapsedCells)
   self.processCell(cell)
-  # self.generateGrid()
+  self.generateGrid()
