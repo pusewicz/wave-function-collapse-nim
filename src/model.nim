@@ -107,10 +107,6 @@ proc complete*(self: Model): bool = self.uncollapsedCells.len == 0
 proc percent*(self: Model): float = 1.0 - float(self.uncollapsedCells.len) /
     float(self.cells.len)
 
-proc randomCell(cells: Model.uncollapsedCells): Cell =
-  let index = rand(cells.len)
-  cells[index]
-
 proc propagate(self: Model, cell: Cell): void # Forward declaration
 proc evaluateNeighbor(self: Model, sourceCell: Cell, direction: Direction): void
 
@@ -179,8 +175,7 @@ proc findLowestEntropy(cells: seq[Cell]): Cell =
     elif cell.entropy == lowestEntropy:
       lowestEntropyCells.add(cell)
 
-  let index = rand(lowestEntropyCells.len)
-  lowestEntropyCells[index]
+  sample(lowestEntropyCells)
 
 proc generateGrid*(self: Model): Grid =
   result = newSeq[seq[Tile]](self.width)
@@ -203,6 +198,6 @@ proc iterate*(self: Model): Cell =
   cell
 
 proc solve*(self: Model): Cell = # TODO: Can this be an array?
-  let cell = randomCell(self.uncollapsedCells)
+  let cell = sample(self.uncollapsedCells)
   self.processCell(cell)
   cell
