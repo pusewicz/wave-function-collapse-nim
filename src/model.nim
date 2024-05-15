@@ -37,7 +37,7 @@ proc new*(_: typedesc[Tile], tileid: int, probability: float,
   edges[Left] = hashes.hash([wangid[7], wangid[6], wangid[5]])
   result = Tile(tileid: tileid, probability: probability, edges: edges)
 
-proc new*(_: typedesc[Cell], x: int, y: int, tiles: sink seq[Tile]): Cell =
+proc new(_: typedesc[Cell], x: int, y: int, tiles: sink seq[Tile]): Cell =
   var cellId {.global.}: int
   result = Cell(x: x, y: y, tiles: tiles, cellId: cellId)
   inc cellId
@@ -64,7 +64,7 @@ proc setTiles*(self: Cell, tiles: seq[Tile]): void =
 
 proc getTile*(self: Cell): Tile = self.tiles[0]
 
-proc collapse*(self: Cell): void =
+proc collapse(self: Cell): void =
   # TODO: Get the random tile by probability and verify the code
   var
     tile: Tile
@@ -86,7 +86,7 @@ proc cellAt*(self: Model, x, y: int): Cell =
   assert result.x == x
   assert result.y == y
 
-proc neighborsFor*(self: Cell, model: Model): Cell.neighbors =
+proc neighborsFor(self: Cell, model: Model): Cell.neighbors =
   if self.y > 0:
     self.neighbors[Up] = model.cellAt(self.x, self.y - 1)
 
