@@ -18,7 +18,7 @@ type
     neighbors*: array[Direction, Cell]
 
   Model* = ref object
-    tiles: seq[Tile]
+    tiles*: seq[Tile]
     width*, height*: int
     cells: seq[Cell]
     uncollapsedCells*: seq[Cell]
@@ -37,10 +37,15 @@ proc new*(_: typedesc[Tile], tileid: int, probability: float,
   edges[Left] = hashes.hash([wangid[7], wangid[6], wangid[5]])
   result = Tile(tileid: tileid, probability: probability, edges: edges)
 
+proc new*(_: typedesc[Cell], x: int, y: int, tiles: sink seq[Tile]): Cell =
+  var cellId {.global.}: int
+  result = Cell(x: x, y: y, tiles: tiles, cellId: cellId)
+  inc cellId
+
 proc new*(_: typedesc[Model], width: int, height: int, tiles: sink seq[Tile]): Model =
   result = Model(width: width, height: height, tiles: tiles)
-  for x in 0 ..< width:
-    for y in 0 ..< height:
+  for y in 0 ..< height:
+    for x in 0 ..< width:
       let cell = Cell(x: x, y: y, tiles: tiles)
       result.cells.add(cell)
 
@@ -48,12 +53,8 @@ proc new*(_: typedesc[Model], width: int, height: int, tiles: sink seq[Tile]): M
   result.uncollapsedCells = result.cells # TODO: Reject already collapsed
   result.maxEntropy = tiles.len # TODO: Calculate max entropy based on cells' tiles
 
-proc new*(_: typedesc[Cell], x: int, y: int, tiles: sink seq[Tile]): Cell =
-  var cellId {.global.}: int
-  result = Cell(x: x, y: y, tiles: tiles, cellId: cellId)
-  inc cellId
-
 proc update(self: Cell): void =
+  assert self.tiles.len > 0
   self.entropy = self.tiles.len
   self.collapsed = self.entropy == 1
 
@@ -79,17 +80,21 @@ proc collapse*(self: Cell): void =
   self.tiles = @[tile]
   self.update()
 
-proc cellAt*(self: Model, x, y: int): Cell = self.cells[x + y * self.width]
+proc cellAt*(self: Model, x, y: int): Cell =
+  result = self.cells[x + y * self.width]
+
+  assert result.x == x
+  assert result.y == y
 
 proc neighborsFor*(self: Cell, model: Model): Cell.neighbors =
-  if self.y < model.height - 1:
-    self.neighbors[Up] = model.cellAt(self.x, self.y + 1)
+  if self.y > 0:
+    self.neighbors[Up] = model.cellAt(self.x, self.y - 1)
 
   if self.x < model.width - 1:
     self.neighbors[Right] = model.cellAt(self.x + 1, self.y)
 
-  if self.y > 0:
-    self.neighbors[Down] = model.cellAt(self.x, self.y - 1)
+  if self.y < model.height - 1:
+    self.neighbors[Down] = model.cellAt(self.x, self.y + 1)
 
   if self.x > 0:
     self.neighbors[Left] = model.cellAt(self.x - 1, self.y)
@@ -142,14 +147,20 @@ proc evaluateNeighbor(self: Model, sourceCell: Cell,
     neighbor.setTiles(newTiles)
 
   if neighbor.collapsed:
-    self.uncollapsedCells.del(self.uncollapsedCells.find(neighbor))
+    let index = self.uncollapsedCells.find(neighbor)
+    # TODO: Cell should always be present
+    if index != -1:
+      self.uncollapsedCells.del(index)
 
   if neighbor.tiles.len != originalTileCount:
     self.propagate(neighbor)
 
 proc processCell*(self: Model, cell: Cell): void =
   cell.collapse()
+  assert cell.collapsed
+
   let index = self.uncollapsedCells.find(cell)
+  assert index != -1
   self.uncollapsedCells.del(index)
 
   if self.uncollapsedCells.len == 0:
@@ -172,7 +183,7 @@ proc findLowestEntropy(cells: seq[Cell]): Cell =
   let index = rand(lowestEntropyCells.len)
   lowestEntropyCells[index]
 
-proc generateGrid(self: Model): Grid =
+proc generateGrid*(self: Model): Grid =
   result = newSeq[seq[Tile]](self.width)
 
   for x in 0 ..< self.width:
@@ -181,7 +192,7 @@ proc generateGrid(self: Model): Grid =
       let cell = self.cellAt(x, y)
       result[x][y] = cell.getTile()
 
-proc iterate*(self: Model): auto =
+proc iterate*(self: Model): Cell =
   if self.complete():
     return nil
 
@@ -190,10 +201,9 @@ proc iterate*(self: Model): auto =
     return nil
 
   self.processCell(cell)
-  self.generateGrid()
+  cell
 
-
-proc solve*(self: Model): Grid = # TODO: Can this be an array?
+proc solve*(self: Model): Cell = # TODO: Can this be an array?
   let cell = randomCell(self.uncollapsedCells)
   self.processCell(cell)
-  self.generateGrid()
+  cell
