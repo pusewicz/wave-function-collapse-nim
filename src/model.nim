@@ -50,6 +50,7 @@ proc new*(_: typedesc[Model], width: int, height: int, tiles: sink seq[Tile]): M
       result.cells.add(cell)
 
   # TODO: Below should be a copy of the cells array
+  # TODO: I guess this should also be a seq of pointers or something?
   result.uncollapsedCells = result.cells # TODO: Reject already collapsed
   result.maxEntropy = tiles.len # TODO: Calculate max entropy based on cells' tiles
 
