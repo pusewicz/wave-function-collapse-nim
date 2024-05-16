@@ -169,16 +169,19 @@ when isMainModule:
   if init(app):
     var
       font: ttf.Font
+      smallFont: ttf.Font
       textColor = sdl.Color(r: 0xFF, g: 0xFF, b: 0xFF)
       deltaTime = 0.0
       ticks: uint64
       freq = sdl.getPerformanceFrequency()
 
     font = ttf.openFont("assets/FSEX300.ttf", 16)
+    smallFont = ttf.openFont("assets/FSEX300.ttf", 10)
     if font == nil:
       sdl.logCritical(sdl.LogCategoryError, "Can't load font: %s", ttf.getError())
 
     discard wfcModel.solve()
+    map = wfcModel.generateGrid()
 
     ticks = sdl.getPerformanceCounter()
 
@@ -193,6 +196,25 @@ when isMainModule:
       s = font.renderUTF8_Solid(fmt"Model percent: {percent:>3.2f}%", textColor)
       discard app.renderer.render(s, 4, 4)
       sdl.freeSurface(s)
+
+      var maxEntropy = wfcModel.maxEntropy
+      for x in 0..<map.len:
+        let column = map[x]
+        for y in 0..<column.len:
+          # let tile = column[x]
+          let entropy = wfcModel.entropy(x, y)
+          # Calculate color from red to green based on entropy percent
+          # entropy == maxEntropy = red
+          # entropy == 1 = green
+          let color = sdl.Color(
+            r: (0xFF * (entropy / maxEntropy)).uint8,
+            g: (0xFF * (1.0 - entropy / maxEntropy)).uint8,
+            b: 0x00
+          )
+          s = smallFont.renderUTF8_Solid(fmt"{entropy}".cstring, color)
+          discard app.renderer.render(s, x * mapJson.tilewidth, y *
+              mapJson.tileheight)
+          sdl.freeSurface(s)
 
       # Update renderer
       app.renderer.renderPresent()
