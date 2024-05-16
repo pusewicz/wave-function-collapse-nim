@@ -178,6 +178,8 @@ proc findLowestEntropy(cells: seq[Cell]): Cell =
 
   sample(lowestEntropyCells)
 
+proc entropy*(self: Model, x, y: int): int = self.cellAt(x, y).entropy
+
 proc generateGrid*(self: Model): Grid =
   result = newSeq[seq[Tile]](self.width)
 
