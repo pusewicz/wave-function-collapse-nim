@@ -39,14 +39,15 @@ proc new*(_: typedesc[Tile], tileid: int, probability: float,
 
 proc new(_: typedesc[Cell], x: int, y: int, tiles: sink seq[Tile]): Cell =
   var cellId {.global.}: int
-  result = Cell(x: x, y: y, tiles: tiles, cellId: cellId)
+  assert tiles.len > 0
+  result = Cell(x: x, y: y, tiles: tiles, cellId: cellId, entropy: tiles.len)
   inc cellId
 
 proc new*(_: typedesc[Model], width: int, height: int, tiles: sink seq[Tile]): Model =
   result = Model(width: width, height: height, tiles: tiles)
   for y in 0 ..< height:
     for x in 0 ..< width:
-      let cell = Cell(x: x, y: y, tiles: tiles)
+      let cell = Cell.new(x, y, tiles)
       result.cells.add(cell)
 
   # TODO: Below should be a copy of the cells array
